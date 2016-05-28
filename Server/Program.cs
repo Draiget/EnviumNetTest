@@ -18,6 +18,7 @@ namespace Server
         public static readonly float MinFrametime = 0.001f;
         public static readonly float MaxFrametime = 0.1f;
 
+        private static IPEndPoint _boundEndPoint;
         private static Socket _socket;
         private static byte[] _buffer;
         private static BaseServer _serverHandler;
@@ -35,16 +36,28 @@ namespace Server
         public static float HostFrametimeStdDeviation = 0.0f;
 
         private static void Main(string[] args) {
+            Console.Title = "ENVIUM DEDICATED SERVER";
+            Console.WriteLine("Initializing the server ...");
             _buffer = new byte[ 4096 ];
-            
+            _boundEndPoint = new IPEndPoint(IPAddress.Any, 644);
+
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            _socket.Bind(new IPEndPoint(IPAddress.Any, 644));
+            try {
+                _socket.Bind(_boundEndPoint);
+            } catch (SocketException ex) {
+                Console.WriteLine("Network: Cannot bound at address {0}: {1}", _boundEndPoint, ex.Message);
+                Console.ReadLine();
+                return;
+            }
+
+            Console.WriteLine("Network: Socket bounded at {0}", _socket.LocalEndPoint as IPEndPoint);
 
             _serverHandler = new BaseServer(_socket);
             Networking.Initialize();
 
             new Thread(GameTick) { IsBackground = true }.Start();
+            Console.WriteLine("Done loading.");
 
             var clientEp = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
             _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref clientEp, DoReceiveFrom, clientEp);
