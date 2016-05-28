@@ -157,5 +157,19 @@ namespace Shared
             ep = new IPEndPoint(ip, 0);
             return true;
         }
+
+        public static void SetTime(double realtime) {
+            var frametime = realtime - _lastRealtime;
+            _lastRealtime = realtime;
+
+            if (frametime > 1.0f) {
+                frametime = 1.0f;
+            } else if(frametime < 0.0f) {
+                frametime = 0.0f;
+            }
+
+            // adjust network time so fakelag works with host_timescale
+            NetTime += frametime * HostTimescale;
+        }
     }
 }

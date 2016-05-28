@@ -38,7 +38,28 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    
+    <Compile Include="BufferRead.cs" />
+    <Compile Include="BufferWrite.cs" />
+    <Compile Include="EConnectionType.cs" />
+    <Compile Include="ENetCommand.cs" />
+    <Compile Include="ESignonState.cs" />
+    <Compile Include="IClientMessageHandler.cs" />
+    <Compile Include="IConnectionlessPacketHandler.cs" />
+    <Compile Include="INetChannelHandler.cs" />
+    <Compile Include="INetMessage.cs" />
+    <Compile Include="INetMessageHandler.cs" />
+    <Compile Include="IRecipientFilter.cs" />
+    <Compile Include="IServerMessageHandler.cs" />
+    <Compile Include="NetChannel.cs" />
+    <Compile Include="NetMessage.cs" />
+    <Compile Include="NetMessages\NetMessageSignonState.cs" />
+    <Compile Include="NetMessages\NetMessageTick.cs" />
+    <Compile Include="NetPacket.cs" />
+    <Compile Include="NetPacketHeader.cs" />
+    <Compile Include="NetProtocol.cs" />
+    <Compile Include="Networking.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

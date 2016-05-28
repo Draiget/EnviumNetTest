@@ -1,0 +1,7 @@
+C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Server\obj\Debug\Server.csprojResolveAssemblyReference.cache
+C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Server\bin\Debug\Server.dll
+C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Server\bin\Debug\Server.pdb
+C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Server\bin\Debug\Shared.dll
+C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Server\bin\Debug\Shared.pdb
+C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Server\obj\Debug\Server.dll
+C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Server\obj\Debug\Server.pdb
