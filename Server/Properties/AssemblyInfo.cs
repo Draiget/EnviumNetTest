@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // Управление общими сведениями о сборке осуществляется с помощью 
 // набора атрибутов. Измените значения этих атрибутов, чтобы изменить сведения,
 // связанные со сборкой.
-[assembly: AssemblyTitle("Envium network client")]
-[assembly: AssemblyDescription("Networking client for Envium")]
+[assembly: AssemblyTitle("Envium Dedicated Server")]
+[assembly: AssemblyDescription("Dedicated server for Envium network")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Client")]
+[assembly: AssemblyProduct("Server")]
 [assembly: AssemblyCopyright("Copyright © ZontWelg Ltd 2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // Следующий GUID служит для идентификации библиотеки типов, если этот проект будет видимым для COM
-[assembly: Guid("94357952-13b5-4ced-acf7-d5e17bafae81")]
+[assembly: Guid("18ED8979-F731-48E8-87B6-DC854D30F924")]
 
 // Сведения о версии сборки состоят из следующих четырех значений:
 //

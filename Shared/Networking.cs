@@ -5,12 +5,13 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Shared.Buffers;
+using Shared.Channel;
 
 namespace Shared
 {
     public class Networking
     {
-        public static readonly byte[] ConnectionlessHeader = {0xFF, 0xFF, 0xFF, 0xFF};
         public static readonly int ConnectionRetries = 4;
 
         private static List<NetChannel> _netChannels;
@@ -87,8 +88,8 @@ namespace Shared
         }
 
         public static bool IsConnectionlessHeader(byte[] data) {
-            for (var i = 0; i < ConnectionlessHeader.Length; i++) {
-                if (data[i] != ConnectionlessHeader[i]) {
+            for (var i = 0; i < NetProtocol.ConnectionlessHeader.Length; i++) {
+                if( data[ i ] != NetProtocol.ConnectionlessHeader[ i ] ) {
                     return false;
                 }
             }
@@ -120,7 +121,7 @@ namespace Shared
         public static void OutOfBandPrintf(Socket socket, EndPoint addr, string format, params object[] args) {
             var msg = new BufferWrite();
 
-            msg.WriteBytes(ConnectionlessHeader);
+            msg.WriteBytes(NetProtocol.ConnectionlessHeader);
             msg.WriteString(string.Format(format, args));
 
             SendPacket(null, socket, addr, msg.GetData());

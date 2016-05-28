@@ -1,6 +1,6 @@
 using Shared.NetMessages;
 
-namespace Shared
+namespace Shared.Messages
 {
     public interface INetMessageHandler
     {

@@ -2,4 +2,3 @@ C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Shared\bin\
 C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Shared\bin\Debug\Shared.pdb
 C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Shared\obj\Debug\Shared.dll
 C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Shared\obj\Debug\Shared.pdb
-C:\Users\Draiget\Documents\Visual Studio 2012\Projects\NetTestServer\Shared\obj\Debug\Shared.csprojResolveAssemblyReference.cache

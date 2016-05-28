@@ -38,24 +38,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BufferRead.cs" />
-    <Compile Include="BufferWrite.cs" />
-    <Compile Include="EConnectionType.cs" />
-    <Compile Include="ENetCommand.cs" />
-    <Compile Include="ESignonState.cs" />
+    <Compile Include="Buffers\BufferRead.cs" />
+    <Compile Include="Buffers\BufferWrite.cs" />
+    <Compile Include="Enums\EConnectionType.cs" />
+    <Compile Include="Enums\ENetCommand.cs" />
+    <Compile Include="Enums\ESignonState.cs" />
     <Compile Include="IClientMessageHandler.cs" />
     <Compile Include="IConnectionlessPacketHandler.cs" />
-    <Compile Include="INetChannelHandler.cs" />
-    <Compile Include="INetMessage.cs" />
-    <Compile Include="INetMessageHandler.cs" />
+    <Compile Include="Channel\INetChannelHandler.cs" />
+    <Compile Include="Messages\INetMessage.cs" />
+    <Compile Include="Messages\INetMessageHandler.cs" />
     <Compile Include="IRecipientFilter.cs" />
     <Compile Include="IServerMessageHandler.cs" />
-    <Compile Include="NetChannel.cs" />
-    <Compile Include="NetMessage.cs" />
+    <Compile Include="Channel\NetChannel.cs" />
+    <Compile Include="Messages\NetMessage.cs" />
     <Compile Include="NetMessages\NetMessageSignonState.cs" />
     <Compile Include="NetMessages\NetMessageTick.cs" />
-    <Compile Include="NetPacket.cs" />
-    <Compile Include="NetPacketHeader.cs" />
+    <Compile Include="Messages\NetPacket.cs" />
+    <Compile Include="Messages\NetPacketHeader.cs" />
     <Compile Include="NetProtocol.cs" />
     <Compile Include="Networking.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

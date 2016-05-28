@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using Shared;
+using Shared.Messages;
 
 namespace Server
 {

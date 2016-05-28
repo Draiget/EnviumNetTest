@@ -1,7 +1,6 @@
 using System.IO;
-using System.Net.Configuration;
 
-namespace Shared
+namespace Shared.Buffers
 {
     public class BufferRead
     {
@@ -68,7 +67,7 @@ namespace Shared
         }
 
         public string ReadString() {
-            string ret = null;
+            string ret = string.Empty;
             while ( _reader.BaseStream.CanRead ) {
                 char rd;
                 if ( (rd = _reader.ReadChar()) == '\0' ) {

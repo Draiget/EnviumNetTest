@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Shared.Buffers;
+using Shared.Enums;
+using Shared.Messages;
 
 namespace Shared.NetMessages
 {

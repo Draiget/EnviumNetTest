@@ -5,6 +5,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Shared;
+using Shared.Buffers;
+using Shared.Channel;
+using Shared.Enums;
+using Shared.Messages;
 using Shared.NetMessages;
 
 namespace Client
@@ -87,9 +91,15 @@ namespace Client
                 CheckForResend();
             }
 
-            if ( NetChannel.IsTimedOut() ) {
-                Console.WriteLine("Lost connection to the server.");
-                Disconnect();
+            if( NetChannel != null ) {
+                if (NetChannel.IsTimingOut()) {
+                    Console.Title = string.Format("Timing out: {0:####.##}", NetChannel.GetTimeoutSeconds() - NetChannel.GetTimeSinceLastReceived());
+                }
+
+                if (NetChannel.IsTimedOut()) {
+                    Console.WriteLine("Lost connection to the server.");
+                    Disconnect();
+                }
             }
         }
 
@@ -104,7 +114,7 @@ namespace Client
             var msg = new BufferWrite();
 
             msg.WriteBytes(NetProtocol.ConnectionlessHeader);
-            msg.WriteByte((byte)EConnectionType.PlayerConnect);
+            msg.WriteChar((char)EConnectionType.PlayerConnect);
             msg.WriteInt(Program.ProtocolVersion);
             msg.WriteInt(authProtocol);
             msg.WriteInt(challengeNr);
@@ -117,7 +127,7 @@ namespace Client
         public virtual bool ProcessConnectionlessPacket(NetPacket packet) {
             var msg = packet.Message;
 
-            var type = (EConnectionType)msg.ReadByte();
+            var type = (EConnectionType)msg.ReadChar();
             switch( type ) {
                 case EConnectionType.ConnectionAccept:
                     if ( SignonState == ESignonState.Challenge ) {
@@ -151,7 +161,7 @@ namespace Client
         }
 
         private void CheckForResend() {
-            if( (float)(DateTime.Now.Ticks - _connectTime) / TimeSpan.TicksPerSecond < Program.ClResend ) {
+            if( Networking.NetTime - _connectTime < Program.ClResend ) {
                 return;
             }
 
@@ -169,7 +179,7 @@ namespace Client
                 return;
             }
 
-            _connectTime = DateTime.Now.Ticks;
+            _connectTime = (float)Networking.NetTime;
 
             if( _retryNumber == 0 ) {
                 Console.WriteLine("Connecting to {0} ...", serverEp);
@@ -201,6 +211,7 @@ namespace Client
                 return false;
             }
 
+            Console.WriteLine("Setting signon to {0}", state);
             SignonState = state;
             return true;
         }

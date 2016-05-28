@@ -5,6 +5,8 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Shared;
+using Shared.Enums;
+using Shared.Messages;
 using Shared.NetMessages;
 
 namespace Client

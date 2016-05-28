@@ -6,6 +6,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Shared;
+using Shared.Buffers;
+using Shared.Enums;
+using Shared.Messages;
 
 // u811@r64.nalog.ru
 namespace Server
@@ -31,7 +34,7 @@ namespace Server
         public void ProcessConnectionlessPacket(NetPacket packet) {
             var msg = packet.Message;
 
-            var type = (EConnectionType)msg.ReadByte();
+            var type = (EConnectionType)msg.ReadChar();
             // TODO: Check connectionless rate limit for remote address
 
             switch( type ) {
@@ -42,6 +45,7 @@ namespace Server
                     // TODO: Responde player's info, map ect.
                     break;
                 case EConnectionType.PlayerConnect:
+                    var data = packet.Data;
                     var protocol = msg.ReadInt();
                     var authProtocol = msg.ReadInt();
                     var challengeNr = msg.ReadInt();
@@ -119,7 +123,7 @@ namespace Server
             
             msg.WriteBytes(NetProtocol.ConnectionlessHeader);
 
-            msg.WriteByte((byte)EConnectionType.ServerChallenge);
+            msg.WriteChar((char)EConnectionType.ServerChallenge);
             msg.WriteInt(challengeNr);
             msg.WriteInt(1); // auth protocol
             msg.WriteString("EE00");

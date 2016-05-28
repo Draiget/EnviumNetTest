@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using Shared;
+using Shared.Messages;
 
 namespace Client
 {
@@ -34,6 +35,7 @@ namespace Client
         private static long _lastTick;
 
         private static void Main(string[] args) {
+            Console.Title = "Envium client";
             ClientName = "Draiget";
             ServerPassword = "";
             _clientState = new ClientState();
@@ -49,7 +51,7 @@ namespace Client
 
             Console.WriteLine(">> Ready for commands.");
 
-            string read;
+            var read = string.Empty;
             while ( (read = Console.ReadLine()) != "exit" ) {
                 if( read != null && read.StartsWith("connect") ) {
                     _clientState.Connect(read.Substring(8));

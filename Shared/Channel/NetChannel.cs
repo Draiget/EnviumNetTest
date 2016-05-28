@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
-using System.Text;
+using Shared.Buffers;
+using Shared.Enums;
+using Shared.Messages;
 
-namespace Shared
+namespace Shared.Channel
 {
     public class NetChannel
     {
@@ -367,6 +367,11 @@ namespace Shared
 
         public float GetTimeoutSeconds() {
             return _timeout;
+        }
+
+        public float GetTimeSinceLastReceived() {
+            var time = (float)Networking.NetTime - _lastReceived;
+            return time > 0.0f ? time : 0.0f;
         }
 
         public void SetRemoteFramerate( float frameTime, float frameTimeStdDeviation ) {

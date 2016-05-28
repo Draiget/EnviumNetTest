@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
+﻿using Shared.Buffers;
+using Shared.Channel;
+using Shared.Enums;
 
-namespace Shared
+namespace Shared.Messages
 {
     public abstract class NetMessage : INetMessage
     {
