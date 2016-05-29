@@ -14,9 +14,17 @@ namespace Server.Clients
         private bool _sendServerInfo;
         private bool _conVarsChanged;
         private bool _receivedPacket;
+        private FrameSnapshot _lastSnapshot;
+        private int _forceWaitForTick;
+        private int _deltaTick;
 
+        public FrameSnapshot Baseline;
+        public int BaselineUsed;
         public double NextMessageTime;
         public float SnapshotInterval;
+        public int BaselineUpdateTick;
+
+        public int EntityIndex;
 
         protected ESignonState SignonState;
         protected BaseServer Server;
@@ -26,6 +34,11 @@ namespace Server.Clients
             SignonState = ESignonState.None;
             _sendServerInfo = false;
             _conVarsChanged = false;
+            _lastSnapshot = null;
+            _forceWaitForTick = -1;
+            _deltaTick = -1;
+            BaselineUsed = 0;
+            Baseline = null;
         }
 
         public void SetRate(int rate) {
@@ -42,20 +55,30 @@ namespace Server.Clients
             return _netChannel.GetDataRate();
         }
 
+        public void FreeBaselines() {
+            if( Baseline != null ) {
+                Baseline.ReleaseRefrence();
+                Baseline = null;
+            }
+
+            BaselineUpdateTick = -1;
+            BaselineUsed = 0;
+        }
+
         public void ConnectionStart(NetChannel netChannel) {
             netChannel.RegisterMessage(new NetMessageTick { ChannelHandler = this });
             netChannel.RegisterMessage(new NetMessageSignonState { ChannelHandler = this });
         }
 
-        public void ConnectionCrashed(string reason) { }
-        public void ConnectionClosing(string reason) { }
+        public virtual void ConnectionCrashed(string reason) { }
+        public virtual void ConnectionClosing(string reason) { }
 
-        public void FileReceived(string fileName, uint transferId) { }
-        public void FileDenied(string fileName, uint transfterId) { }
-        public void FileRequested(string fileName, uint transferId) { }
+        public virtual void FileReceived(string fileName, uint transferId) { }
+        public virtual void FileDenied(string fileName, uint transfterId) { }
+        public virtual void FileRequested(string fileName, uint transferId) { }
 
-        public void PacketStart(int inSequence, int outAcknowledged) { }
-        public void PacketEnd() { }
+        public virtual void PacketStart(int inSequence, int outAcknowledged) { }
+        public virtual void PacketEnd() { }
 
         public void Connect(string name, NetChannel channel) {
             _clientName = name;
@@ -73,6 +96,12 @@ namespace Server.Clients
         }
 
         public virtual void Disconnect(string format, params object[] args) {
+            if ( SignonState == ESignonState.None ) {
+                return;
+            }
+
+            SignonState = ESignonState.None;
+
             var reason = string.Format(format, args);
             Console.WriteLine("Dropped \"{0}\" from server: {1}", _clientName, reason);
 
@@ -144,6 +173,11 @@ namespace Server.Clients
             _sendServerInfo = false;
             _conVarsChanged = false;
             NextMessageTime = 0;
+            _lastSnapshot = null;
+            _forceWaitForTick = -1;
+            _deltaTick = -1;
+            BaselineUpdateTick = -1;
+            BaselineUsed = 0;
         }
 
         public string GetClientName() {
@@ -226,8 +260,76 @@ namespace Server.Clients
             _conVarsChanged = true;
         }
 
-        public virtual void SendSnapshot() {
-            
+        public virtual void SendSnapshot( ClientFrame frame ) {
+            // do not send same snapshot twice
+            if ( _lastSnapshot == frame.GetSnapshot() ) {
+                NetChannel.Transmit();
+                return;
+            }
+
+            // if we send a full snapshot (no delta-compression) before, wait until client
+            // received and acknowledge that update. don't spam client with full updates
+            if( _forceWaitForTick > 0 ) {
+                NetChannel.Transmit();
+                return;
+            }
+
+            var msg = new BufferWrite();
+
+            var deltaFrame = GetDeltaFrame( _deltaTick );
+            if( deltaFrame == null ) {
+                // We need to send a full update and reset the instanced baselines
+                OnRequestFullUpdate();
+            }
+
+            var tickmsg = new NetMessageTick( frame.TickCount, Program.HostFrametimeUnbounded, Program.HostFrametimeStdDeviation );
+            tickmsg.WriteToBuffer(msg);
+
+            // send entity update, delta compressed if deltaFrame != NULL
+            Server.WriteDeltaEntities( this, frame, deltaFrame, msg );
+
+            var maxTempEnts = 255;
+            Server.WriteTempEntities( this, frame.GetSnapshot(), _lastSnapshot, msg, maxTempEnts );
+
+            _lastSnapshot = frame.GetSnapshot();
+
+            if ( NetChannel == null ) {
+                _deltaTick = frame.TickCount;
+                return;
+            }
+
+            bool sendOk;
+
+            if (deltaFrame == null) {
+                sendOk = NetChannel.SendData(msg);
+                sendOk = sendOk && NetChannel.Transmit();
+
+                // remember this tickcount we send the reliable snapshot
+                // so we can continue sending other updates if this has been acknowledged
+                _forceWaitForTick = frame.TickCount;
+            } else {
+                sendOk = NetChannel.SendDatagram( msg ) > 0;
+            }
+
+            if ( !sendOk ) {
+                Disconnect("Error! Couldn't send snapshot.");
+            }
+        }
+
+        public void OnRequestFullUpdate() {
+            // client requests a full update 
+            _lastSnapshot = null;
+
+            // free old baseline snapshot
+            FreeBaselines();
+
+            Baseline = Program.FrameSnapshotManager.CreateEmptySnapshot(0, 1 << 11);
+
+            Console.WriteLine("Sending full update to client \"{0}\"", GetClientName());
+        }
+
+        public ClientFrame GetDeltaFrame( int tick ) {
+            return null;
         }
 
         public void UpdateSendState() {
@@ -271,7 +373,7 @@ namespace Server.Clients
                 }
             }
 
-            if ( sendMessage && NetChannel != null && NetChannel.CanPacket() ) {
+            if ( sendMessage && NetChannel != null && !NetChannel.CanPacket() ) {
                 NetChannel.SetChoked();
                 sendMessage = false;
             }

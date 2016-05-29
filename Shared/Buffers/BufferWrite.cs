@@ -18,6 +18,10 @@ namespace Shared.Buffers
             _writer = new BinaryWriter(_ms);
         }
 
+        public long Position {
+            get { return _ms.ToArray().Length; }
+        }
+
         public byte[] GetData() {
             return _ms.ToArray();
         }

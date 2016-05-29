@@ -53,6 +53,7 @@ namespace Shared
 
             if (channel == null) {
                 channel = new NetChannel();
+                _netChannels.Add(channel);
             }
 
             channel.Setup(sock, clientName, clientEp, handler);
@@ -79,7 +80,7 @@ namespace Shared
                     continue;
                 }
 
-                if (channel.GetRemoteAddress() == clientEp) {
+                if (channel.GetRemoteAddress().CompareAddr(clientEp, false)) {
                     return channel;
                 }
             }

@@ -12,6 +12,7 @@ namespace Server
         public int ListIndex;
         public int TickCount;
         public FrameSnapshotEntry[] Entities;
+        public int NumEntities;
 
         private int _refrences;
 

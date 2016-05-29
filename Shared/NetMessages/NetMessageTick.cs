@@ -52,7 +52,7 @@ namespace Shared.NetMessages
         }
 
         public override ENetCommand GetMsgType() {
-            return ENetCommand.Tick;
+            return ENetCommand.NetTick;
         }
     }
 }

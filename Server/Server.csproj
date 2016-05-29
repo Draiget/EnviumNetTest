@@ -41,6 +41,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="EntityInfo.cs" />
+    <Compile Include="EntityWriteInfo.cs" />
+    <Compile Include="EUpdateType.cs" />
     <Compile Include="IClientFrameManager.cs" />
     <Compile Include="Clients\BaseClient.cs" />
     <Compile Include="BaseServer.cs" />
@@ -53,6 +56,7 @@
     <Compile Include="Clients\IClient.cs" />
     <Compile Include="Clients\IClientMessageHandler.cs" />
     <Compile Include="IServer.cs" />
+    <Compile Include="PackedEntity.cs" />
     <Compile Include="Plugins\EPluginResult.cs" />
     <Compile Include="Plugins\IServerPluginCallbacks.cs" />
     <Compile Include="Plugins\Plugin.cs" />

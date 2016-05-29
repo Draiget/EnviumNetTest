@@ -82,8 +82,8 @@ namespace Client
             while (true) {
                 try {
                     HostRunFrame((float)Utils.SysTime());
-                } catch (Exception) {
-                    ;
+                } catch (Exception e) {
+                    Console.WriteLine("Unknown game tick error ({0}): {1}\n{2}", e.GetType(), e.Message, e.StackTrace);
                 }
             }
         }

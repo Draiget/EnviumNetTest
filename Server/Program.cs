@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Server.Plugins;
 using Shared;
@@ -102,8 +103,8 @@ namespace Server
             while( true ) {
                 try {
                     HostRunFrame( (float)Utils.SysTime() );
-                } catch( Exception ) {
-                    ;
+                } catch( Exception e ) {
+                    Console.WriteLine("Game tick error occured ({0}): {1}\n{2}", e.GetType(), e.Message, e.StackTrace);
                 }
             }
         }
@@ -133,15 +134,43 @@ namespace Server
                 try {
                     dataLen = _socket.EndReceiveFrom(iar, ref clientEp);
                     packet.Assign(clientEp, dataLen, _buffer);
-                } catch( Exception e ) {
-                    Console.WriteLine("Recv error ({0}): {1}", e.GetType(), e.Message);
+                } catch( SocketException se ) {
+                    var ipEndPoint = clientEp as IPEndPoint;
+                    if( ipEndPoint != null && ipEndPoint.Port != 0 ) {
+                        var errChannel = Networking.FindNetChannelFor(_socket, clientEp);
+                        if( errChannel != null ) {
+                            if (se.SocketErrorCode == SocketError.ConnectionReset) {
+                                errChannel.Shutdown("Connection reset");
+                            } else {
+                                errChannel.Shutdown(string.Format("Socket error: {0} ({1})", se.SocketErrorCode, se.ErrorCode));
+                            }
+                        }
+                    }
+
                 } finally {
                     var newEp = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
-                    _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref newEp, DoReceiveFrom, newEp);
+                    while (true) {
+                        try {
+                            _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref newEp, DoReceiveFrom, newEp);
+                            break;
+                        } catch (SocketException se) {
+                            var ipEndPoint = newEp as IPEndPoint;
+                            if( ipEndPoint != null && ipEndPoint.Port != 0 ) {
+                                var errChannel = Networking.FindNetChannelFor(_socket, newEp);
+                                if( errChannel != null ) {
+                                    if( se.SocketErrorCode == SocketError.ConnectionReset ) {
+                                        errChannel.Shutdown("Connection reset");
+                                    } else {
+                                        errChannel.Shutdown(string.Format("Socket error: {0} ({1})", se.SocketErrorCode, se.ErrorCode));
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // do not need process empty packets
-                if( dataLen == 0 && packet.HasData ) {
+                if( dataLen == 0 || !packet.HasData ) {
                     return;
                 }
 
@@ -182,6 +211,7 @@ namespace Server
 
             for( var tick = 0; tick < numticks; tick++ ) {
                 Networking.RunFrame(time);
+                NetworkingProcessPending();
 
                 ++_hostCurrentFrameTick;
 
@@ -192,6 +222,10 @@ namespace Server
             }
 
             Thread.Sleep(5);
+        }
+
+        private static void NetworkingProcessPending() {
+            
         }
 
         private static void HostRunFrame_Server(bool finalTick) {

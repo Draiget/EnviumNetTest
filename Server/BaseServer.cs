@@ -22,7 +22,7 @@ namespace Server
         private List<NetChallenge> _serverQueryChallenges;
 
         protected readonly Socket Socket;
-        protected List<BaseClient> Clients;
+        protected List<GameClient> Clients;
 
         public BufferWrite Signon;
         public float TickInterval;
@@ -32,7 +32,7 @@ namespace Server
         public BaseServer(Socket serverSocket) {
             Socket = serverSocket;
             _serverQueryChallenges = new List<NetChallenge>();
-            Clients = new List<BaseClient>();
+            Clients = new List<GameClient>();
             Signon = new BufferWrite();
             TickInterval = 0.03f;
         }
@@ -102,7 +102,7 @@ namespace Server
                 return;
             }
 
-            var client = new BaseClient(this);
+            var client = new GameClient( GetFreeSlot(), this);
             var channel = Networking.CreateChannel(Socket, name, addr, client);
             if( channel == null ) {
                 RejectConnecton(addr, "Failed to create net channel!\n");
@@ -126,6 +126,20 @@ namespace Server
 
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("Client \"{0}\" has connected from [{1}]", client.GetClientName(), channel.GetRemoteAddress());
+        }
+
+        private int GetFreeSlot() {
+            if( Clients.Count == 0 ) {
+                return 0;
+            }
+
+            for (var i = 0; i < Clients.Count; i++) {
+                if ( Clients[i] == null ) {
+                    return i;
+                }   
+            }
+
+            return Clients.Count + 1 < Program.SvMaxPlayers ? Clients.Count + 1 : -1;
         }
 
         private void ReplyChallenge(EndPoint clientEp) {
@@ -401,6 +415,55 @@ namespace Server
             TickCount = 0;
 
             _serverQueryChallenges.Clear();
+        }
+
+        public void WriteDeltaEntities(BaseClient client, ClientFrame to, ClientFrame from, BufferWrite buf ) {
+            var u = new EntityWriteInfo();
+            u.Buf = buf;
+            u.To = to;
+            u.ToSnapshot = to.GetSnapshot();
+            u.Baseline = client.Baseline;
+            u.FullProps = 0;
+            u.Server = this;
+            u.ClientEntity = client.EntityIndex;
+            u.CullProps = true;
+
+            if (from != null) {
+                u.AsDelta = true;
+                u.From = from;
+                u.FromSnapshot = from.GetSnapshot();
+            } else {
+                u.AsDelta = false;
+                u.From = null;
+                u.FromSnapshot = null;
+            }
+
+            u.HeaderCount = 0;
+
+            // set from_baseline pointer if this snapshot may become a baseline update
+            if ( client.BaselineUpdateTick == -1 ) {
+                // TODO: Clear client baselines sent
+                // TODO: Set 'to' from baseline to client.BaselinesSent
+            }
+
+            u.Buf.WriteUShort( (ushort)ENetCommand.SvcPacketEntities );
+            u.Buf.WriteInt( u.ToSnapshot.NumEntities );
+
+            if (u.AsDelta) {
+                u.Buf.WriteByte(1);
+                u.Buf.WriteInt(u.From.TickCount);
+            } else {
+                u.Buf.WriteByte(0);
+            }
+
+            u.Buf.WriteInt( client.BaselineUsed );
+
+            // Store off current position 
+            var savePos = u.Buf.Position;
+        }
+
+        public void WriteTempEntities(BaseClient baseClient, FrameSnapshot getSnapshot, FrameSnapshot lastSnapshot, BufferWrite msg, int maxTempEnts) {
+            // CBaseServer::WriteTempEntities
         }
     }
 

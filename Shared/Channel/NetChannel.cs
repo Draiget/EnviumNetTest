@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using Shared.Buffers;
 using Shared.Enums;
 using Shared.Messages;
@@ -144,6 +145,7 @@ namespace Shared.Channel
 
             _lastReceived = (float)Networking.NetTime;
             _messageHandler.PacketStart( _inSequenceNr, _outSequenceNrAck );
+            Console.WriteLine("Packet read!");
 
             if( msg.GetNumBitsLeft() > 0 ) {
                 if ( !ProcessMessages(msg) ) {
@@ -156,12 +158,12 @@ namespace Shared.Channel
 
         public bool ProcessMessages(BufferRead buf) {
             while (true) {
-                if ( buf.GetNumBitsLeft() < 5 ) {
+                if ( buf.GetNumBitsLeft() <= 0 ) {
                     break;
                 }
 
                 var cmd = buf.ReadUShort();
-                if( cmd <= (ushort)ENetCommand.File ) {
+                if( cmd <= (ushort)ENetCommand.NetFile ) {
                     if( !ProcessControlMessage((ENetCommand)cmd, buf) ) {
                         return false;
                     }
@@ -192,17 +194,17 @@ namespace Shared.Channel
         }
 
         private bool ProcessControlMessage( ENetCommand cmd, BufferRead buf ) {
-            if ( cmd == ENetCommand.Nop ) {
+            if ( cmd == ENetCommand.NetNop ) {
                 return true;
             }
 
-            if ( cmd == ENetCommand.Disconnect ) {
+            if ( cmd == ENetCommand.NetDisconnect ) {
                 var reason = buf.ReadString();
                 _messageHandler.ConnectionClosing( reason );
                 return false;
             }
 
-            if ( cmd == ENetCommand.File ) {
+            if ( cmd == ENetCommand.NetFile ) {
                 var transferId = buf.ReadUInt();
                 var fileName = buf.ReadString();
 
@@ -254,10 +256,13 @@ namespace Shared.Channel
             Clear();
 
             if( reason != null ) {
-                StreamUnreliable.WriteUShort((ushort)ENetCommand.Disconnect);
+                StreamUnreliable.WriteUShort((ushort)ENetCommand.NetDisconnect);
                 StreamUnreliable.WriteString(reason);
                 Transmit();
             }
+
+            _socket = null;
+            _remoteAddress = null;
 
             if( _messageHandler != null ) {
                 _messageHandler.ConnectionClosing(reason);
@@ -279,7 +284,7 @@ namespace Shared.Channel
             }
         }
 
-        private int SendDatagram(BufferWrite datagram) {
+        public int SendDatagram(BufferWrite datagram) {
             var send = new BufferWrite();
 
             send.WriteInt(_outSequenceNr);
@@ -408,7 +413,7 @@ namespace Shared.Channel
         }
 
         public void DenyFile(string fileName, uint transferId) {
-            StreamReliable.WriteUShort( (ushort)ENetCommand.File );
+            StreamReliable.WriteUShort( (ushort)ENetCommand.NetFile );
             StreamReliable.WriteUInt( transferId );
             StreamReliable.WriteString( fileName );
             StreamReliable.WriteByte( 0 );

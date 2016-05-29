@@ -42,13 +42,14 @@ namespace Server
                     continue;
                 }
 
+                Console.WriteLine("Write snapshot");
                 if (sendSnapshots && client.IsActive()) {
                     receivingClients.Add(client);
                 } else {
 
                     // if client never send a netchannl packet yet, send ConnectionAccept because it could get lost in multiplayer
-                    if ( client.NetChannel.GetSequenceNr( EFlowType.Incoming ) == 0) {
-                        Networking.OutOfBandPrintf(Socket, client.NetChannel.GetRemoteAddress(), "{0}00000000000000", EConnectionType.ConnectionAccept);
+                    if ( client.NetChannel.GetSequenceNr( EFlowType.Incoming ) == 0 ) {
+                        Networking.OutOfBandPrintf(Socket, client.NetChannel.GetRemoteAddress(), "{0}00000000000000", (char)EConnectionType.ConnectionAccept);
                     }
 
                     client.NetChannel.Transmit();
@@ -69,7 +70,7 @@ namespace Server
                         continue;
                     }
 
-                    cl.SendSnapshot();
+                    cl.SendSnapshot( frame );
                     cl.UpdateSendState();
                 }
 

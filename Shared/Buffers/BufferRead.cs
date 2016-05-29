@@ -68,7 +68,7 @@ namespace Shared.Buffers
 
         public string ReadString() {
             string ret = string.Empty;
-            while ( _reader.BaseStream.CanRead ) {
+            while( GetNumBitsLeft() > 0 ) {
                 char rd;
                 if ( (rd = _reader.ReadChar()) == '\0' ) {
                     return ret;

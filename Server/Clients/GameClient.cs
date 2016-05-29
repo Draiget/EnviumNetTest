@@ -8,10 +8,16 @@ namespace Server.Clients
         private ClientFrame _frames;
         public ClientFrame CurrentFrame;
 
-        public GameClient(BaseServer server) : base(server) {
+        public GameClient(int slot, BaseServer server) : base(server) {
             Clear();
+
+            EntityIndex = slot + 1;
             _frames = null;
             Server = server;
+        }
+
+        public override void ConnectionClosing(string reason) {
+            Disconnect(reason ?? "Connection closing");
         }
 
         public override void Disconnect(string format, params object[] args) {
@@ -20,6 +26,7 @@ namespace Server.Clients
             }
 
             Server.RemoveClientFromGame(this);
+            base.Disconnect(format, args);
         }
 
         public override bool SetSignonState(ESignonState state) {
@@ -44,6 +51,16 @@ namespace Server.Clients
             }
 
             return true;
+        }
+
+        public override void SendSnapshot( ClientFrame frame ) {
+            WriteViewAngleUpdate();
+
+            base.SendSnapshot( frame );
+        }
+
+        public void WriteViewAngleUpdate() {
+            // TODO: send the current viewpos offset from the view entity
         }
 
         public bool CheckConnect() {

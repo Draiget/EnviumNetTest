@@ -40,7 +40,7 @@ namespace Shared.NetMessages
         }
 
         public override ENetCommand GetMsgType() {
-            return ENetCommand.SignonState;
+            return ENetCommand.NEtSignonState;
         }
 
         public ESignonState SignonState {
