@@ -179,6 +179,8 @@ namespace Client
 
                 // TODO: Send queued network packets
             }
+
+            Thread.Sleep(5);
         }
 
         private static void HostRunFrame_Input(float accumulatedExtraSamples, bool finalTick) {

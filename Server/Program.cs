@@ -26,7 +26,8 @@ namespace Server
         private static IPEndPoint _boundEndPoint;
         private static Socket _socket;
         private static byte[] _buffer;
-        private static GameServer _serverHandler;
+
+        public static GameServer Server;
         
         public static float Realtime;
         public static float HostFrametime;
@@ -34,6 +35,8 @@ namespace Server
         public static float HostFrametimeStdDeviation = 0.0f;
 
         public static ServerPlugin ServerPluginHandler;
+
+        public static FrameSnapshotManager FrameSnapshotManager;
 
         private static void Main(string[] args) {
             Console.Title = "ENVIUM DEDICATED SERVER";
@@ -53,8 +56,9 @@ namespace Server
 
             Console.WriteLine("Network: Socket bounded at {0}", _socket.LocalEndPoint as IPEndPoint);
 
+            FrameSnapshotManager = new FrameSnapshotManager();
             ServerPluginHandler = new ServerPlugin();
-            _serverHandler = new GameServer(_socket) {
+            Server = new GameServer(_socket) {
                 State = EServerState.Loading, 
                 TickInterval = GetTickInterval()
             };
@@ -62,7 +66,7 @@ namespace Server
             Networking.Initialize();
 
             new Thread(GameTick) { IsBackground = true }.Start();
-            _serverHandler.State = EServerState.Active;
+            Server.State = EServerState.Active;
             Console.WriteLine("Done loading.");
 
             var clientEp = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
@@ -84,7 +88,7 @@ namespace Server
             }
         }
 
-        private static float GetTickInterval() {
+        public static float GetTickInterval() {
             var tickInterval = DefaultTickInterval;
             var tickrate = Tickrate;
             if ( tickrate > 10 ) {
@@ -145,7 +149,7 @@ namespace Server
                 if( Networking.IsConnectionlessHeader(packet.Data) ) {
                     packet.Message.ReadInt(); // read connectionless header (the -1)
 
-                    _serverHandler.ProcessConnectionlessPacket(packet);
+                    Server.ProcessConnectionlessPacket(packet);
                     return;
                 }
 
@@ -165,17 +169,12 @@ namespace Server
         public static void HostRunFrame(float time) {
             AccumulateTime(time);
 
-            var prevRemainder = _hostRemainder;
-            if ( prevRemainder < 0 ) {
-                prevRemainder = 0;
-            }
-
             _hostRemainder += HostFrametime;
 
             var numticks = 0;
-            if( _hostRemainder >= _serverHandler.TickInterval ) {
-                numticks = (int)( _hostRemainder / _serverHandler.TickInterval );
-                _hostRemainder -= numticks * _serverHandler.TickInterval;
+            if( _hostRemainder >= Server.TickInterval ) {
+                numticks = (int)( _hostRemainder / Server.TickInterval );
+                _hostRemainder -= numticks * Server.TickInterval;
             }
 
             _hostFrameTicks = numticks;
@@ -192,11 +191,12 @@ namespace Server
                 // TODO: Send queued network packets
             }
 
+            Thread.Sleep(5);
         }
 
         private static void HostRunFrame_Server(bool finalTick) {
-            _serverHandler.RunFrame();
-            _serverHandler.TickCount++;
+            Server.RunFrame();
+            Server.TickCount++;
 
             if( finalTick ) {
                 SendClientUpdates();
@@ -204,7 +204,7 @@ namespace Server
         }
 
         public static void SendClientUpdates() {
-            _serverHandler.SendClientMessages();
+            Server.SendClientMessages( true );
         }
     }
 

@@ -325,7 +325,7 @@ namespace Shared.Channel
             return _outSequenceNr - 1;
         }
 
-        private bool Transmit(bool onlyReliable = false) {
+        public bool Transmit(bool onlyReliable = false) {
             // TODO: onlyReliable -> reset unreliable buffer stream
             if ( onlyReliable ) {
                 StreamUnreliable.Reset();
@@ -421,6 +421,36 @@ namespace Shared.Channel
             // TODO: Add framgents to file waiting list
 
             return false;
+        }
+
+        public bool HasPendingReliableData() {
+            return StreamReliable.GetNumBitsWritten() > 0;
+        }
+
+        public bool CanPacket() {
+            if( _remoteAddress != null && IPAddress.IsLoopback(( _remoteAddress as IPEndPoint ).Address) ) {
+                return true;
+            }
+
+            // TODO: Has queued packets
+            return _clearTime < Networking.NetTime;
+        }
+
+        public void SetChoked() {
+            _outSequenceNr++;
+            _chokedPackets++;
+        }
+
+        public int GetSequenceNr( EFlowType flow ) {
+            if ( flow == EFlowType.Outgoing ) {
+                return _outSequenceNr;
+            }
+
+            if ( flow == EFlowType.Incoming ) {
+                return _inSequenceNr;
+            }
+
+            return 0;
         }
     }
 }

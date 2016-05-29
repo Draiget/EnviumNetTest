@@ -41,6 +41,7 @@
     <Compile Include="Buffers\BufferRead.cs" />
     <Compile Include="Buffers\BufferWrite.cs" />
     <Compile Include="Enums\EConnectionType.cs" />
+    <Compile Include="Enums\EFlowType.cs" />
     <Compile Include="Enums\ENetCommand.cs" />
     <Compile Include="Enums\EServerState.cs" />
     <Compile Include="Enums\ESignonState.cs" />

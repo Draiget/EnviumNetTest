@@ -41,9 +41,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IClientFrameManager.cs" />
     <Compile Include="Clients\BaseClient.cs" />
     <Compile Include="BaseServer.cs" />
+    <Compile Include="ClientFrame.cs" />
     <Compile Include="Clients\GameClient.cs" />
+    <Compile Include="FrameSnapshot.cs" />
+    <Compile Include="FrameSnapshotEntry.cs" />
+    <Compile Include="FrameSnapshotManager.cs" />
     <Compile Include="GameServer.cs" />
     <Compile Include="Clients\IClient.cs" />
     <Compile Include="Clients\IClientMessageHandler.cs" />

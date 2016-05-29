@@ -1,4 +1,5 @@
 ﻿using System;
+using Shared;
 using Shared.Buffers;
 using Shared.Channel;
 using Shared.Enums;
@@ -12,6 +13,11 @@ namespace Server.Clients
         private NetChannel _netChannel;
         private bool _sendServerInfo;
         private bool _conVarsChanged;
+        private bool _receivedPacket;
+
+        public double NextMessageTime;
+        public float SnapshotInterval;
+
         protected ESignonState SignonState;
         protected BaseServer Server;
 
@@ -137,6 +143,7 @@ namespace Server.Clients
             SignonState = ESignonState.None;
             _sendServerInfo = false;
             _conVarsChanged = false;
+            NextMessageTime = 0;
         }
 
         public string GetClientName() {
@@ -217,6 +224,59 @@ namespace Server.Clients
 
             Server.UserInfoChanged(this);
             _conVarsChanged = true;
+        }
+
+        public virtual void SendSnapshot() {
+            
+        }
+
+        public void UpdateSendState() {
+            if (IsActive()) {
+                // multiplayer mode
+                var maxDelta = Utils.Min(Program.GetTickInterval(), SnapshotInterval);
+                var delta = Utils.Clamp(Networking.NetTime - NextMessageTime, 0.0f, maxDelta);
+                NextMessageTime = Networking.NetTime + SnapshotInterval - delta;
+            } else {
+                // signon mode
+                if (NetChannel != null && NetChannel.HasPendingReliableData() && NetChannel.GetTimeSinceLastReceived() < 1.0f) {
+                    NextMessageTime = Networking.NetTime;
+                } else {
+                    NextMessageTime = Networking.NetTime + 1.0f;
+                }
+            }
+        }
+
+        public void SetUpdateRate( int updateRate ) {
+            updateRate = Utils.Clamp(updateRate, 1, 100);
+            SnapshotInterval = 1.0f / updateRate;
+        }
+
+        public int GetUpdateRate() {
+            if( SnapshotInterval > 0 ) {
+                return (int)( 1.0f / SnapshotInterval );
+            }
+
+            return 0;
+        }
+
+        public bool ShouldSendMessage() {
+            if ( !IsConnected() ) {
+                return false;
+            }
+
+            var sendMessage = NextMessageTime <= Networking.NetTime;
+            if( !sendMessage && !IsActive() ) {
+                if( _receivedPacket && NetChannel != null && NetChannel.HasPendingReliableData() ) {
+                    sendMessage = true;
+                }
+            }
+
+            if ( sendMessage && NetChannel != null && NetChannel.CanPacket() ) {
+                NetChannel.SetChoked();
+                sendMessage = false;
+            }
+
+            return sendMessage;
         }
     }
 }

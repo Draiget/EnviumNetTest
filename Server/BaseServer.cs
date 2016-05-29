@@ -19,9 +19,10 @@ namespace Server
         private const int MaxChallenges = 16384;
         private const float ChallengeLifetime = 60 * 60.0f;
 
-        private readonly Socket _socket;
         private List<NetChallenge> _serverQueryChallenges;
-        private List<BaseClient> _clients;
+
+        protected readonly Socket Socket;
+        protected List<BaseClient> Clients;
 
         public BufferWrite Signon;
         public float TickInterval;
@@ -29,9 +30,9 @@ namespace Server
         public EServerState State;
 
         public BaseServer(Socket serverSocket) {
-            _socket = serverSocket;
+            Socket = serverSocket;
             _serverQueryChallenges = new List<NetChallenge>();
-            _clients = new List<BaseClient>();
+            Clients = new List<BaseClient>();
             Signon = new BufferWrite();
             TickInterval = 0.03f;
         }
@@ -96,13 +97,13 @@ namespace Server
                 return;
             }
 
-            if( _clients.Count + 1 > Program.SvMaxPlayers ) {
+            if( Clients.Count + 1 > Program.SvMaxPlayers ) {
                 RejectConnecton(addr, "Server is full.\n");
                 return;
             }
 
             var client = new BaseClient(this);
-            var channel = Networking.CreateChannel(_socket, name, addr, client);
+            var channel = Networking.CreateChannel(Socket, name, addr, client);
             if( channel == null ) {
                 RejectConnecton(addr, "Failed to create net channel!\n");
                 return;
@@ -114,11 +115,14 @@ namespace Server
             // make sure client is reset and clear
             client.Connect(name, channel);
 
+            client.SnapshotInterval = 1.0f / 20.0f;
+            client.NextMessageTime = Networking.NetTime + client.SnapshotInterval;
+
             // add client to global list
-            _clients.Add(client);
+            Clients.Add(client);
 
             // tell client connection worked, now use netchannels
-            Networking.OutOfBandPrintf(_socket, addr, "{0}00000000000000", (char)EConnectionType.ConnectionAccept);
+            Networking.OutOfBandPrintf(Socket, addr, "{0}00000000000000", (char)EConnectionType.ConnectionAccept);
 
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("Client \"{0}\" has connected from [{1}]", client.GetClientName(), channel.GetRemoteAddress());
@@ -137,7 +141,7 @@ namespace Server
             msg.WriteInt(1); // auth protocol
             msg.WriteString("EE00");
 
-            Networking.SendPacket(null, _socket, clientEp, msg.GetData());
+            Networking.SendPacket(null, Socket, clientEp, msg.GetData());
         }
 
         private bool CheckChallengeNr(EndPoint addr, int challenge) {
@@ -206,7 +210,7 @@ namespace Server
         }
 
         private bool CheckIPConnectionReuse(EndPoint addr) {
-            var sameConnections = _clients.Count(client => client.IsConnected() && !client.IsActive() && client.NetChannel.GetRemoteAddress().CompareAddr(addr, true));
+            var sameConnections = Clients.Count(client => client.IsConnected() && !client.IsActive() && client.NetChannel.GetRemoteAddress().CompareAddr(addr, true));
             if( sameConnections > Networking.MaxReusePerIp ) {
                 Console.WriteLine("Too many connect packets from {0}!", addr.ToString(true));
                 return false;
@@ -257,11 +261,11 @@ namespace Server
 
         public void RejectConnecton(EndPoint addr, string format, params object[] args) {
             var message = string.Format(format, args);
-            Networking.OutOfBandPrintf(_socket, addr, "{0}{1}", (char)EConnectionType.ConnectionReject, message);
+            Networking.OutOfBandPrintf(Socket, addr, "{0}{1}", (char)EConnectionType.ConnectionReject, message);
         }
 
         public void SendPendingServerInfo() {
-            foreach (var client in _clients) {
+            foreach (var client in Clients) {
                 if ( client.HasWaitSendServerInfo() ) {
                     client.SendServerInfo();
                 }
@@ -274,7 +278,7 @@ namespace Server
         }
 
         private void CheckTimeouts() {
-            foreach (var client in _clients) {
+            foreach (var client in Clients) {
                 if ( !client.IsConnected() ) {
                     continue;
                 }
@@ -291,7 +295,7 @@ namespace Server
         }
 
         private void UpdateUserSettings() {
-            foreach (var client in _clients) {
+            foreach (var client in Clients) {
                 if ( client.HasConvarsChanged() ) {
                     client.UpdateUserSettings();
                 }
@@ -299,7 +303,7 @@ namespace Server
         }
 
         public void BroadcastMessage(INetMessage msg, bool onlyActive = false, bool reliable = false) {
-            foreach (var client in _clients) {
+            foreach (var client in Clients) {
                 if ( (onlyActive && !client.IsActive()) || !client.IsSpawned() ) {
                     continue;
                 }
@@ -323,7 +327,7 @@ namespace Server
 
             msg.SetReliable( filter.IsReliable() );
 
-            foreach (var client in _clients) {
+            foreach (var client in Clients) {
                 if ( !client.IsSpawned() ) {
                     continue;
                 }
@@ -344,8 +348,19 @@ namespace Server
             // TODO: Update network strings table
         }
 
-        public void SendClientMessages() {
-            
+        public virtual void SendClientMessages( bool sendSnapshots ) {
+            foreach (var client in Clients) {
+                if ( !client.ShouldSendMessage() ) {
+                    continue;
+                }
+
+                if (client.NetChannel != null) {
+                    client.NetChannel.Transmit();
+                    client.UpdateSendState();
+                } else {
+                    Console.WriteLine("Client has no NetChannel!");
+                }
+            }
         }
 
         public virtual bool IsActive() {
@@ -366,14 +381,14 @@ namespace Server
             }
 
             State = EServerState.Dead;
-            foreach (var client in _clients) {
+            foreach (var client in Clients) {
                 if (client.IsConnected()) {
                     client.Disconnect("Server shutting down");
                 } else {
                     client.Clear();
                 }
 
-                _clients.Remove(client);
+                Clients.Remove(client);
             }
 
             Thread.Sleep(100);

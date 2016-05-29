@@ -3,11 +3,14 @@ using Shared.Enums;
 
 namespace Server.Clients
 {
-    public class GameClient : BaseClient
+    public class GameClient : BaseClient, IClientFrameManager
     {
+        private ClientFrame _frames;
+        public ClientFrame CurrentFrame;
+
         public GameClient(BaseServer server) : base(server) {
             Clear();
-
+            _frames = null;
             Server = server;
         }
 
@@ -63,6 +66,115 @@ namespace Server.Clients
         public override void Reconnect() {
             Server.RemoveClientFromGame(this);
             base.Reconnect();
+        }
+
+        public ClientFrame GetSendFrame() {
+            return CurrentFrame;
+        }
+
+        public void SetupPackInfo( FrameSnapshot snapshot ) {
+            // TODO: Setup PVS visibility
+
+            CurrentFrame = new ClientFrame();
+            CurrentFrame.Init( snapshot );
+
+            var maxFrames = ClientFrame.MaxClientFrames;
+            if( maxFrames < AddClientFrame(CurrentFrame) ) {
+                RemoveOldestFrame();
+            }
+        }
+
+        public ClientFrame GetClientFrame(int tick, bool exact) {
+            if( tick < 0 ) {
+                return null;
+            }
+
+            var frame = _frames;
+            var lastFrame = frame;
+
+            while( frame != null ) {
+                if( frame.TickCount >= tick ) {
+                    if( frame.TickCount == tick ) {
+                        return frame;
+                    }
+
+                    if( exact ) {
+                        return null;
+                    }
+
+                    return lastFrame;
+                }
+
+                lastFrame = frame;
+                frame = frame.NextFrame;
+            }
+
+            if( exact ) {
+                return null;
+            }
+
+            return lastFrame;
+        }
+
+        public int AddClientFrame(ClientFrame frame) {
+            if( _frames == null ) {
+                _frames = frame;
+                return 1;
+            }
+
+            var count = 1;
+            var f = _frames;
+            while( f.NextFrame != null ) {
+                f = f.NextFrame;
+                ++count;
+            }
+
+            ++count;
+            f.NextFrame = frame;
+
+            return count;
+        }
+
+        public int CountClientFrames() {
+            var count = 0;
+            var f = _frames;
+            while( f != null ) {
+                ++count;
+                f = f.NextFrame;
+            }
+
+            return count;
+        }
+
+        public void RemoveOldestFrame() {
+            var frame = _frames;
+            if( frame == null ) {
+                return;
+            }
+
+            _frames = frame.NextFrame;
+        }
+
+        public void DeleteClientFrames(int tick) {
+            var frame = _frames;
+            ClientFrame prev = null;
+
+            while( frame != null ) {
+                if( tick < 0 || frame.TickCount < tick ) {
+                    // then remove frame
+
+                    if( prev != null ) {
+                        prev.NextFrame = frame.NextFrame;
+                        frame = prev.NextFrame;
+                    } else {
+                        _frames = frame.NextFrame;
+                        frame = _frames;
+                    }
+                } else {
+                    prev = frame;
+                    frame = frame.NextFrame;
+                }
+            }
         }
     }
 }
