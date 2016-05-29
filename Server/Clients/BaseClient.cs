@@ -1,28 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using Shared;
 using Shared.Buffers;
 using Shared.Channel;
 using Shared.Enums;
 using Shared.NetMessages;
 
-namespace Server
+namespace Server.Clients
 {
     public class BaseClient : INetChannelHandler, IClient, IClientMessageHandler
     {
         private string _clientName;
         private NetChannel _netChannel;
-        private ESignonState _signonState;
         private bool _sendServerInfo;
         private bool _conVarsChanged;
-        private BaseServer _server;
+        protected ESignonState SignonState;
+        protected BaseServer Server;
 
         public BaseClient(BaseServer server) {
-            _server = server;
-            _signonState = ESignonState.None;
+            Server = server;
+            SignonState = ESignonState.None;
             _sendServerInfo = false;
             _conVarsChanged = false;
         }
@@ -60,18 +55,18 @@ namespace Server
             _clientName = name;
             _netChannel = channel;
 
-            _signonState = ESignonState.Connected;
+            SignonState = ESignonState.Connected;
         }
 
-        public void Reconnect() {
+        public virtual void Reconnect() {
             _netChannel.Clear();
 
-            _signonState = ESignonState.Connected;
-            var signon = new NetMessageSignonState( _signonState );
+            SignonState = ESignonState.Connected;
+            var signon = new NetMessageSignonState( SignonState );
             _netChannel.SendNetMsg(signon);
         }
 
-        public void Disconnect(string format, params object[] args) {
+        public virtual void Disconnect(string format, params object[] args) {
             var reason = string.Format(format, args);
             Console.WriteLine("Dropped \"{0}\" from server: {1}", _clientName, reason);
 
@@ -83,7 +78,7 @@ namespace Server
             Clear();
         }
 
-        public bool SetSignonState(ESignonState state) {
+        public virtual bool SetSignonState(ESignonState state) {
             switch (state) {
                 case ESignonState.Connected:
                     // client is connected, leave client in this state
@@ -108,27 +103,28 @@ namespace Server
             return true;
         }
 
-        private bool SendSignonData() {
-            _signonState = ESignonState.PreSpawn;
+        public virtual bool SendSignonData() {
+            SignonState = ESignonState.PreSpawn;
 
-            _netChannel.SendData(_server.Signon);
-            var signonState = new NetMessageSignonState( _signonState );
+            _netChannel.SendData(Server.Signon);
+            var signonState = new NetMessageSignonState( SignonState );
 
             return _netChannel.SendNetMsg( signonState );
         }
 
-        private void SpawnPlayer() {
-            _signonState = ESignonState.Spawn;
-            
-            var tick = new NetMessageTick( _server.GetTick(), Program.HostFrametimeUnbounded, Program.HostFrametimeStdDeviation );
+        public virtual void SpawnPlayer() {
+            var tick = new NetMessageTick( Server.GetTick(), Program.HostFrametimeUnbounded, Program.HostFrametimeStdDeviation );
             _netChannel.SendNetMsg(tick, true);
 
-            var signonState = new NetMessageSignonState( _signonState );
+            SignonState = ESignonState.Spawn;
+            var signonState = new NetMessageSignonState( SignonState );
             _netChannel.SendNetMsg( signonState );
         }
         
-        private void ActivatePlayer() {
-            _signonState = ESignonState.Full;
+        public virtual void ActivatePlayer() {
+            SignonState = ESignonState.Full;
+
+            Server.UserInfoChanged(this);
         }
 
         public void Clear() {
@@ -138,7 +134,7 @@ namespace Server
             }
 
             _clientName = string.Empty;
-            _signonState = ESignonState.None;
+            SignonState = ESignonState.None;
             _sendServerInfo = false;
             _conVarsChanged = false;
         }
@@ -148,15 +144,15 @@ namespace Server
         }
 
         public bool IsConnected() {
-            return _signonState >= ESignonState.Connected;
+            return SignonState >= ESignonState.Connected;
         }
 
         public bool IsActive() {
-            return _signonState == ESignonState.Full;
+            return SignonState == ESignonState.Full;
         }
 
         public bool IsSpawned() {
-            return _signonState >= ESignonState.New;
+            return SignonState >= ESignonState.New;
         }
 
         public NetChannel NetChannel {
@@ -175,9 +171,9 @@ namespace Server
             var msg = new BufferWrite();
 
             _sendServerInfo = false;
-            _signonState = ESignonState.New;
+            SignonState = ESignonState.New;
 
-            var signonMsg = new NetMessageSignonState( _signonState );
+            var signonMsg = new NetMessageSignonState( SignonState );
             signonMsg.WriteToBuffer(msg);
 
             if( !_netChannel.SendData(msg) ) {
@@ -202,7 +198,7 @@ namespace Server
                 // TODO :Check respan count and reconnect is they not match
             }
 
-            if ( msg.SignonState != _signonState ) {
+            if ( msg.SignonState != SignonState ) {
                 Reconnect();
                 return true;
             }
@@ -219,7 +215,7 @@ namespace Server
             // SetRate();
             // TODO: Setup rate from client convars
 
-            _server.UserInfoChanged(this);
+            Server.UserInfoChanged(this);
             _conVarsChanged = true;
         }
     }

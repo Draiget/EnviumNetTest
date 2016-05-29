@@ -159,7 +159,13 @@ namespace Shared
             return true;
         }
 
-        public static void SetTime(double realtime) {
+        public static void RunFrame(double realtime) {
+            SetTime(realtime);
+
+            // TODO: Run rcon frame
+        }
+
+        private static void SetTime(double realtime) {
             var frametime = realtime - _lastRealtime;
             _lastRealtime = realtime;
 

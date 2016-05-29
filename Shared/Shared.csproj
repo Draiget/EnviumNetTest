@@ -42,6 +42,7 @@
     <Compile Include="Buffers\BufferWrite.cs" />
     <Compile Include="Enums\EConnectionType.cs" />
     <Compile Include="Enums\ENetCommand.cs" />
+    <Compile Include="Enums\EServerState.cs" />
     <Compile Include="Enums\ESignonState.cs" />
     <Compile Include="IClientMessageHandler.cs" />
     <Compile Include="IConnectionlessPacketHandler.cs" />

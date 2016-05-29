@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using Shared;
 using Shared.Buffers;
 using Shared.Enums;
@@ -13,7 +14,7 @@ using Shared.Messages;
 // u811@r64.nalog.ru
 namespace Server
 {
-    public class BaseServer
+    public class BaseServer : IServer
     {
         private const int MaxChallenges = 16384;
         private const float ChallengeLifetime = 60 * 60.0f;
@@ -23,13 +24,19 @@ namespace Server
         private List<BaseClient> _clients;
 
         public BufferWrite Signon;
+        public float TickInterval;
+        public int TickCount;
+        public EServerState State;
 
         public BaseServer(Socket serverSocket) {
             _socket = serverSocket;
             _serverQueryChallenges = new List<NetChallenge>();
             _clients = new List<BaseClient>();
             Signon = new BufferWrite();
+            TickInterval = 0.03f;
         }
+
+        public virtual void RemoveClientFromGame(BaseClient client) { }
 
         public void ProcessConnectionlessPacket(NetPacket packet) {
             var msg = packet.Message;
@@ -323,11 +330,55 @@ namespace Server
         }
 
         public int GetTick() {
-            return Program.TickCount;
+            return TickCount;
         }
 
         public void UserInfoChanged(BaseClient client) {
             // TODO: Update network strings table
+        }
+
+        public void SendClientMessages() {
+            
+        }
+
+        public virtual bool IsActive() {
+            return State >= EServerState.Active;
+        }
+
+        public virtual bool IsLoading() {
+            return State == EServerState.Loading;
+        }
+
+        public virtual bool IsPaused() {
+            return State == EServerState.Paused;
+        }
+
+        public virtual void Shutdown() {
+            if ( !IsActive() ) {
+                return;
+            }
+
+            State = EServerState.Dead;
+            foreach (var client in _clients) {
+                if (client.IsConnected()) {
+                    client.Disconnect("Server shutting down");
+                } else {
+                    client.Clear();
+                }
+
+                _clients.Remove(client);
+            }
+
+            Thread.Sleep(100);
+            Clear();
+        }
+
+        public virtual void Clear() {
+            // TODO: Remove & clear stringtables
+            State = EServerState.Dead;
+            TickCount = 0;
+
+            _serverQueryChallenges.Clear();
         }
     }
 

@@ -2,7 +2,9 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using Server.Plugins;
 using Shared;
+using Shared.Enums;
 using Shared.Messages;
 
 namespace Server
@@ -13,8 +15,10 @@ namespace Server
         public static bool SvLan = false;
         public static string SvPassword = "";
         public static readonly int SvMaxPlayers = 32;
+        public static float SvTimeout = 200f;
 
-        public static readonly float Tickrate = 33;
+        public static float Tickrate = 33;
+        public static readonly float DefaultTickInterval = 0.015f;
 
         public static readonly float MinFrametime = 0.001f;
         public static readonly float MaxFrametime = 0.1f;
@@ -22,19 +26,14 @@ namespace Server
         private static IPEndPoint _boundEndPoint;
         private static Socket _socket;
         private static byte[] _buffer;
-        private static BaseServer _serverHandler;
-
-        public static int TickCount;
-        public static long LastTickElapse;
-
-        private static long _tickTempTime;
-        private static long _lastTickStart;
-        private static long _lastTick;
+        private static GameServer _serverHandler;
         
         public static float Realtime;
         public static float HostFrametime;
         public static float HostFrametimeUnbounded = 0.0f;
         public static float HostFrametimeStdDeviation = 0.0f;
+
+        public static ServerPlugin ServerPluginHandler;
 
         private static void Main(string[] args) {
             Console.Title = "ENVIUM DEDICATED SERVER";
@@ -54,11 +53,13 @@ namespace Server
 
             Console.WriteLine("Network: Socket bounded at {0}", _socket.LocalEndPoint as IPEndPoint);
 
-            _serverHandler = new BaseServer(_socket);
+            ServerPluginHandler = new ServerPlugin();
+            _serverHandler = new GameServer(_socket) {State = EServerState.Loading};
             Networking.Initialize();
 
             new Thread(GameTick) { IsBackground = true }.Start();
             Console.WriteLine("Done loading.");
+            _serverHandler.State = EServerState.Active;
 
             var clientEp = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
             _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref clientEp, DoReceiveFrom, clientEp);
@@ -79,34 +80,24 @@ namespace Server
             }
         }
 
-        public static float ACurTime() {
-            return (float)(TickCount * 0.015);
+        private static float GetTickInterval() {
+            var tickInterval = DefaultTickInterval;
+            var tickrate = Tickrate;
+            if ( tickrate > 10 ) {
+                tickInterval = 1.0f / tickrate;
+            }
+
+            return tickInterval;
         }
 
         private static void GameTick() {
             while( true ) {
-                _tickTempTime = DateTime.Now.Ticks;
-                if( _tickTempTime - _lastTick < Math.Floor(9899999f / Tickrate) - LastTickElapse )
-                    continue;
-
-                _lastTickStart = _tickTempTime;
-
                 try {
-                    GameFrame(Utils.SysTime());
+                    HostRunFrame( (float)Utils.SysTime() );
                 } catch( Exception ) {
                     ;
                 }
-
-                _lastTick = DateTime.Now.Ticks;
-                LastTickElapse = _lastTick - _lastTickStart;
-                TickCount++;
             }
-        }
-
-        private static void GameFrame(double time) {
-            AccumulateTime((float)time);
-            Networking.SetTime(time);
-            _serverHandler.RunFrame();
         }
 
         private static void AccumulateTime(float dt) {
@@ -163,7 +154,52 @@ namespace Server
             }
         }
 
-        
+        private static float _hostRemainder;
+        private static int _hostFrameTicks;
+        private static int _hostCurrentFrameTick;
+
+        public static void HostRunFrame(float time) {
+            AccumulateTime(time);
+
+            var prevRemainder = _hostRemainder;
+            if ( prevRemainder < 0 ) {
+                prevRemainder = 0;
+            }
+
+            var numticks = 0;
+            if( _hostRemainder >= _serverHandler.TickInterval ) {
+                numticks = (int)( _hostRemainder / _serverHandler.TickInterval );
+                _hostRemainder -= numticks * _serverHandler.TickInterval;
+            }
+
+            _hostFrameTicks = numticks;
+            _hostCurrentFrameTick = 0;
+
+            for( var tick = 0; tick < numticks; tick++ ) {
+                Networking.RunFrame(time);
+
+                ++_hostCurrentFrameTick;
+
+                var finalTick = tick == (numticks - 1);
+                HostRunFrame_Server(finalTick);
+
+                // TODO: Send queued network packets
+            }
+
+        }
+
+        private static void HostRunFrame_Server(bool finalTick) {
+            _serverHandler.RunFrame();
+            _serverHandler.TickCount++;
+
+            if( finalTick ) {
+                SendClientUpdates();
+            }
+        }
+
+        public static void SendClientUpdates() {
+            _serverHandler.SendClientMessages();
+        }
     }
 
     
