@@ -75,8 +75,8 @@ namespace Client
             NetChannel.SendFile(fileName, transferId);
         }
 
-        public override void RunFrame(double time) {
-            base.RunFrame(time);
+        public override void RunFrame() {
+            base.RunFrame();
 
             if ( NetChannel != null ) {
                 NetChannel.SetDataRate( Program.ClRate );
@@ -91,10 +91,6 @@ namespace Client
 
             NetChannel.SetRemoteFramerate(msg.HostFrameTime, msg.HostFrameTimeStdDeviation);
             return true;
-        }
-
-        public void SetFrameTime(float time) {
-            FrameTime = time;
         }
     }
 }

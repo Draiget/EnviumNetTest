@@ -6,12 +6,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using Server.Clients;
 using Shared;
 using Shared.Buffers;
 using Shared.Enums;
 using Shared.Messages;
 
-// u811@r64.nalog.ru
 namespace Server
 {
     public class BaseServer : IServer
@@ -42,7 +42,10 @@ namespace Server
             var msg = packet.Message;
 
             var type = (EConnectionType)msg.ReadChar();
-            // TODO: Check connectionless rate limit for remote address
+
+            if( !CheckConnectionLessRateLimits(packet.From) ) {
+                return;
+            }
 
             switch( type ) {
                 case EConnectionType.GetChallenge:
@@ -52,7 +55,6 @@ namespace Server
                     // TODO: Responde player's info, map ect.
                     break;
                 case EConnectionType.PlayerConnect:
-                    var data = packet.Data;
                     var protocol = msg.ReadInt();
                     var authProtocol = msg.ReadInt();
                     var challengeNr = msg.ReadInt();
@@ -196,6 +198,11 @@ namespace Server
 
             _serverQueryChallenges.Add(newChallenge);
             return newChallenge.Challenge;
+        }
+
+        private bool CheckConnectionLessRateLimits(EndPoint addr) {
+            // TODO: Check connections for ip per second window
+            return true;
         }
 
         private bool CheckIPConnectionReuse(EndPoint addr) {

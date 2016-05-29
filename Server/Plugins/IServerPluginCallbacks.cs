@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Security;
 using System.Text;
+using Server.Clients;
 
 namespace Server.Plugins
 {

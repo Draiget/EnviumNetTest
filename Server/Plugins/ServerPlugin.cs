@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Net;
+using Server.Clients;
 
 namespace Server.Plugins
 {

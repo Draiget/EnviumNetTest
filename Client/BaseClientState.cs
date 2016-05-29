@@ -86,20 +86,9 @@ namespace Client
         public virtual void PacketStart(int inSequence, int outAcknowledged) { }
         public virtual void PacketEnd() { }
 
-        public virtual void RunFrame( double time ) {
+        public virtual void RunFrame() {
             if ( SignonState == ESignonState.Challenge ) {
                 CheckForResend();
-            }
-
-            if( NetChannel != null ) {
-                if (NetChannel.IsTimingOut()) {
-                    Console.Title = string.Format("Timing out: {0:####.##}", NetChannel.GetTimeoutSeconds() - NetChannel.GetTimeSinceLastReceived());
-                }
-
-                if (NetChannel.IsTimedOut()) {
-                    Console.WriteLine("Lost connection to the server.");
-                    Disconnect();
-                }
             }
         }
 
@@ -228,6 +217,14 @@ namespace Client
 
         public virtual bool ProcessSignonState(NetMessageSignonState msg) {
             return SetSignonState(msg.SignonState);
+        }
+
+        public bool IsActive() {
+            return SignonState == ESignonState.Full;
+        }
+
+        public bool IsConnected() {
+            return SignonState >= ESignonState.Connected;
         }
     }
 }

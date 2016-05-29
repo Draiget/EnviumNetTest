@@ -54,12 +54,16 @@ namespace Server
             Console.WriteLine("Network: Socket bounded at {0}", _socket.LocalEndPoint as IPEndPoint);
 
             ServerPluginHandler = new ServerPlugin();
-            _serverHandler = new GameServer(_socket) {State = EServerState.Loading};
+            _serverHandler = new GameServer(_socket) {
+                State = EServerState.Loading, 
+                TickInterval = GetTickInterval()
+            };
+
             Networking.Initialize();
 
             new Thread(GameTick) { IsBackground = true }.Start();
-            Console.WriteLine("Done loading.");
             _serverHandler.State = EServerState.Active;
+            Console.WriteLine("Done loading.");
 
             var clientEp = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
             _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref clientEp, DoReceiveFrom, clientEp);
@@ -165,6 +169,8 @@ namespace Server
             if ( prevRemainder < 0 ) {
                 prevRemainder = 0;
             }
+
+            _hostRemainder += HostFrametime;
 
             var numticks = 0;
             if( _hostRemainder >= _serverHandler.TickInterval ) {

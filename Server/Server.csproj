@@ -41,12 +41,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BaseClient.cs" />
+    <Compile Include="Clients\BaseClient.cs" />
     <Compile Include="BaseServer.cs" />
-    <Compile Include="GameClient.cs" />
+    <Compile Include="Clients\GameClient.cs" />
     <Compile Include="GameServer.cs" />
-    <Compile Include="IClient.cs" />
-    <Compile Include="IClientMessageHandler.cs" />
+    <Compile Include="Clients\IClient.cs" />
+    <Compile Include="Clients\IClientMessageHandler.cs" />
     <Compile Include="IServer.cs" />
     <Compile Include="Plugins\EPluginResult.cs" />
     <Compile Include="Plugins\IServerPluginCallbacks.cs" />

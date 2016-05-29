@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Shared;
-using Shared.Channel;
+﻿using Shared.Channel;
 
-namespace Server
+namespace Server.Clients
 {
     public interface IClient
     {

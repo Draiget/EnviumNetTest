@@ -13,12 +13,14 @@ namespace Client
 {
     class Program
     {
+        public static bool SvCheats = false;
         public static readonly float ClResend = 1.4f;
         public static readonly float ClRate = 30000.0f;
         public static readonly bool ClAllowUpload = false;
 
         public static readonly int ProtocolVersion = 12;
         public static readonly float Tickrate = 33;
+        public static readonly float DefaultTickInterval = 0.015f;
 
         private static Socket _socket;
 
@@ -27,12 +29,15 @@ namespace Client
 
         private static ClientState _clientState;
 
-        public static long TicksElapsed;
-        public static long LastTickElapse;
+        public static readonly float MinFrametime = 0.001f;
+        public static readonly float MaxFrametime = 0.1f;
 
-        private static long _tickTempTime;
-        private static long _lastTickStart;
-        private static long _lastTick;
+        public static float Realtime;
+        public static float HostFrametime;
+        public static float HostFrametimeUnbounded = 0.0f;
+        public static float HostFrametimeStdDeviation = 0.0f;
+
+        public static float IntervalPerTick = 0.03f;
 
         private static void Main(string[] args) {
             Console.Title = "Envium client";
@@ -46,6 +51,7 @@ namespace Client
 
             Networking.Initialize();
             _clientState.Initialize(_socket);
+            IntervalPerTick = GetTickInterval();
             new Thread(NetTick) { IsBackground = true }.Start();
             new Thread(GameTick) { IsBackground = true }.Start();
 
@@ -62,32 +68,23 @@ namespace Client
             }
         }
 
+        private static float GetTickInterval() {
+            var tickInterval = DefaultTickInterval;
+            var tickrate = Tickrate;
+            if( tickrate > 10 ) {
+                tickInterval = 1.0f / tickrate;
+            }
+
+            return tickInterval;
+        }
+
         private static void GameTick() {
             while (true) {
-                _tickTempTime = DateTime.Now.Ticks;
-                if( _tickTempTime - _lastTick < Math.Floor(9899999f / Tickrate) - LastTickElapse )
-                    continue;
-
-                _lastTickStart = _tickTempTime;
-
                 try {
-                    GameFrame(Utils.SysTime());
+                    HostRunFrame((float)Utils.SysTime());
                 } catch (Exception) {
                     ;
                 }
-
-                _lastTick = DateTime.Now.Ticks;
-                LastTickElapse = _lastTick - _lastTickStart;
-                TicksElapsed++;
-            }
-        }
-
-        private static void GameFrame(double time) {
-            Networking.SetTime(time);
-            _clientState.SetFrameTime((float)time);
-
-            if ( _clientState != null ) {
-                _clientState.RunFrame( time );
             }
         }
 
@@ -128,5 +125,80 @@ namespace Client
             }
         }
 
+        private static void AccumulateTime(float dt) {
+            Realtime += dt;
+            HostFrametime = dt;
+
+            if( Networking.HostTimescale > 0f && SvCheats ) {
+                var fullscale = Networking.HostTimescale;
+
+                HostFrametime *= fullscale;
+                HostFrametimeUnbounded = HostFrametime;
+            } else {
+                HostFrametimeUnbounded = HostFrametime;
+                HostFrametime = Utils.Min(HostFrametime, MaxFrametime);
+                HostFrametime = Utils.Max(HostFrametime, MinFrametime);
+            }
+        }
+
+        private static float _hostRemainder;
+        private static int _hostFrameTicks;
+        private static int _hostCurrentFrameTick;
+
+        private static void HostRunFrame(float time) {
+            AccumulateTime(time);
+
+            var prevRemainder = _hostRemainder;
+            if( prevRemainder < 0 ) {
+                prevRemainder = 0;
+            }
+
+            _hostRemainder += HostFrametime;
+
+            var numticks = 0;
+            if( _hostRemainder >= IntervalPerTick ) {
+                numticks = (int)( _hostRemainder / IntervalPerTick );
+                _hostRemainder -= numticks * IntervalPerTick;
+            }
+
+            _hostFrameTicks = numticks;
+            _hostCurrentFrameTick = 0;
+
+            _clientState.FrameTime = HostFrametime;
+            for( var tick = 0; tick < numticks; tick++ ) {
+                Networking.RunFrame(time);
+
+                ++_hostCurrentFrameTick;
+
+                var finalTick = tick == ( numticks - 1 );
+
+                HostRunFrame_Input(prevRemainder, finalTick);
+                prevRemainder = 0;
+
+                HostRunFrame_Client(finalTick);
+
+                // TODO: Send queued network packets
+            }
+        }
+
+        private static void HostRunFrame_Input(float accumulatedExtraSamples, bool finalTick) {
+            // TODO: CL_Move
+        }
+
+        public static void HostRunFrame_Client(bool frameFinished) {
+            if( (_clientState.NetChannel != null && _clientState.NetChannel.IsTimedOut()) && frameFinished && _clientState.IsConnected() ) {
+                Console.WriteLine("Server connection timed out.");
+                // TODO: Show dialog
+
+                _clientState.Disconnect(true);
+                return;
+            }
+
+            if( _clientState.NetChannel != null && _clientState.NetChannel.IsTimingOut() ) {
+                Console.Title = string.Format("Timing out: {0:####.##}", _clientState.NetChannel.GetTimeoutSeconds() - _clientState.NetChannel.GetTimeSinceLastReceived());
+            }
+
+            _clientState.RunFrame();
+        }
     }
 }
