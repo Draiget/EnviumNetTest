@@ -1,4 +1,6 @@
 ﻿using System;
+using Server.Frames;
+using Server.Util;
 using Shared;
 using Shared.Buffers;
 using Shared.Channel;
@@ -103,7 +105,7 @@ namespace Server.Clients
             SignonState = ESignonState.None;
 
             var reason = string.Format(format, args);
-            Console.WriteLine("Dropped \"{0}\" from server: {1}", _clientName, reason);
+            Out.MsgC( ConsoleColor.DarkYellow, "Client \"{0}\" dropped from server: {1}", _clientName, reason);
 
             if ( _netChannel != null ) {
                 _netChannel.Shutdown(reason);
@@ -164,7 +166,7 @@ namespace Server.Clients
 
         public void Clear() {
             if( _netChannel != null ) {
-                _netChannel.Shutdown("Disconnect by server.\n");
+                _netChannel.Shutdown("Disconnect by server");
                 _netChannel = null;
             }
 
@@ -312,7 +314,7 @@ namespace Server.Clients
             }
 
             if ( !sendOk ) {
-                Disconnect("Error! Couldn't send snapshot.");
+                Disconnect("Error! Couldn't send snapshot");
             }
         }
 
@@ -325,7 +327,7 @@ namespace Server.Clients
 
             Baseline = Program.FrameSnapshotManager.CreateEmptySnapshot(0, 1 << 11);
 
-            Console.WriteLine("Sending full update to client \"{0}\"", GetClientName());
+            Out.Debug("Sending full update to client \"{0}\"", GetClientName());
         }
 
         public ClientFrame GetDeltaFrame( int tick ) {

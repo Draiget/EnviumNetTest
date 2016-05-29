@@ -3,7 +3,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Server.Frames;
 using Server.Plugins;
+using Server.Util;
 using Shared;
 using Shared.Enums;
 using Shared.Messages;
@@ -40,8 +42,11 @@ namespace Server
         public static FrameSnapshotManager FrameSnapshotManager;
 
         private static void Main(string[] args) {
+            Console.ForegroundColor = ConsoleColor.White;
             Console.Title = "ENVIUM DEDICATED SERVER";
-            Console.WriteLine("Initializing the server ...");
+
+            Out.MsgC( ConsoleColor.Green, "Initializing the server ...");
+
             _buffer = new byte[ 4096 ];
             _boundEndPoint = new IPEndPoint(IPAddress.Any, 644);
 
@@ -50,12 +55,12 @@ namespace Server
             try {
                 _socket.Bind(_boundEndPoint);
             } catch (SocketException ex) {
-                Console.WriteLine("Network: Cannot bound at address {0}: {1}", _boundEndPoint, ex.Message);
+                Out.Error("Network: Cannot bound at address {0}: {1}", _boundEndPoint, ex.Message);
                 Console.ReadLine();
                 return;
             }
 
-            Console.WriteLine("Network: Socket bounded at {0}", _socket.LocalEndPoint as IPEndPoint);
+            Out.Msg("Network: Socket bounded at {0}", _socket.LocalEndPoint as IPEndPoint);
 
             FrameSnapshotManager = new FrameSnapshotManager();
             ServerPluginHandler = new ServerPlugin();
@@ -68,7 +73,7 @@ namespace Server
 
             new Thread(GameTick) { IsBackground = true }.Start();
             Server.State = EServerState.Active;
-            Console.WriteLine("Done loading.");
+            Out.Msg("Done loading.");
 
             var clientEp = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
             _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref clientEp, DoReceiveFrom, clientEp);
@@ -104,7 +109,7 @@ namespace Server
                 try {
                     HostRunFrame( (float)Utils.SysTime() );
                 } catch( Exception e ) {
-                    Console.WriteLine("Game tick error occured ({0}): {1}\n{2}", e.GetType(), e.Message, e.StackTrace);
+                    Out.Exception(e, "Game tick error occured");
                 }
             }
         }
@@ -130,23 +135,11 @@ namespace Server
                 var packet = new NetPacket();
                 var clientEp = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
                 var dataLen = 0;
-                byte[] data = null;
                 try {
                     dataLen = _socket.EndReceiveFrom(iar, ref clientEp);
                     packet.Assign(clientEp, dataLen, _buffer);
                 } catch( SocketException se ) {
-                    var ipEndPoint = clientEp as IPEndPoint;
-                    if( ipEndPoint != null && ipEndPoint.Port != 0 ) {
-                        var errChannel = Networking.FindNetChannelFor(_socket, clientEp);
-                        if( errChannel != null ) {
-                            if (se.SocketErrorCode == SocketError.ConnectionReset) {
-                                errChannel.Shutdown("Connection reset");
-                            } else {
-                                errChannel.Shutdown(string.Format("Socket error: {0} ({1})", se.SocketErrorCode, se.ErrorCode));
-                            }
-                        }
-                    }
-
+                    ProcessAsyncReadError( se, clientEp );
                 } finally {
                     var newEp = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
                     while (true) {
@@ -154,17 +147,7 @@ namespace Server
                             _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref newEp, DoReceiveFrom, newEp);
                             break;
                         } catch (SocketException se) {
-                            var ipEndPoint = newEp as IPEndPoint;
-                            if( ipEndPoint != null && ipEndPoint.Port != 0 ) {
-                                var errChannel = Networking.FindNetChannelFor(_socket, newEp);
-                                if( errChannel != null ) {
-                                    if( se.SocketErrorCode == SocketError.ConnectionReset ) {
-                                        errChannel.Shutdown("Connection reset");
-                                    } else {
-                                        errChannel.Shutdown(string.Format("Socket error: {0} ({1})", se.SocketErrorCode, se.ErrorCode));
-                                    }
-                                }
-                            }
+                            ProcessAsyncReadError( se, newEp );
                         }
                     }
                 }
@@ -187,7 +170,30 @@ namespace Server
                     channel.ProcessPacket(packet, true);
                 }
             } catch( ObjectDisposedException e ) {
-                Console.WriteLine("Recv dispose error ({0}): {1}", e.GetType(), e.Message);
+                Out.Exception(e, "DoReceiveFrom cause error");
+            }
+        }
+
+        private static void ProcessAsyncReadError(SocketException se, EndPoint clientEp) {
+            var ipEndPoint = clientEp as IPEndPoint;
+            if( ipEndPoint != null && ipEndPoint.Port != 0 ) {
+                var errChannel = Networking.FindNetChannelFor(_socket, clientEp);
+                if( errChannel != null ) {
+                    switch( se.SocketErrorCode ) {
+                        case SocketError.ConnectionReset:
+                            errChannel.Shutdown("Connection reset");
+                            break;
+                        case SocketError.ConnectionRefused:
+                            errChannel.Shutdown("Connection refused");
+                            break;
+                        case SocketError.ConnectionAborted:
+                            errChannel.Shutdown("Connection aborted");
+                            break;
+                        default:
+                            errChannel.Shutdown(string.Format("Socket error: {0} ({1})", se.SocketErrorCode, se.ErrorCode));
+                            break;
+                    }
+                }
             }
         }
 
@@ -211,7 +217,6 @@ namespace Server
 
             for( var tick = 0; tick < numticks; tick++ ) {
                 Networking.RunFrame(time);
-                NetworkingProcessPending();
 
                 ++_hostCurrentFrameTick;
 
@@ -222,10 +227,6 @@ namespace Server
             }
 
             Thread.Sleep(5);
-        }
-
-        private static void NetworkingProcessPending() {
-            
         }
 
         private static void HostRunFrame_Server(bool finalTick) {
@@ -241,6 +242,4 @@ namespace Server
             Server.SendClientMessages( true );
         }
     }
-
-    
 }

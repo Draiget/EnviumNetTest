@@ -5,6 +5,8 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using Server.Clients;
+using Server.Frames;
+using Server.Util;
 using Shared;
 using Shared.Channel;
 using Shared.Enums;
@@ -30,7 +32,7 @@ namespace Server
             base.Shutdown();
 
             // TODO: Make shutdown event
-            Console.WriteLine("Server studown.");
+            Out.Warning("Server studown");
         }
 
         public override void SendClientMessages(bool sendSnapshots) {
@@ -42,7 +44,7 @@ namespace Server
                     continue;
                 }
 
-                Console.WriteLine("Write snapshot");
+                Out.Debug("Write snapshot");
                 if (sendSnapshots && client.IsActive()) {
                     receivingClients.Add(client);
                 } else {

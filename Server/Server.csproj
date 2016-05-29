@@ -33,6 +33,10 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="JetBrains.Annotations, Version=10.1.4.0, Culture=neutral, PublicKeyToken=1010a0d8d6380325, processorArchitecture=MSIL">
+      <HintPath>..\packages\JetBrains.Annotations.10.1.4\lib\net20\JetBrains.Annotations.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -43,15 +47,15 @@
   <ItemGroup>
     <Compile Include="EntityInfo.cs" />
     <Compile Include="EntityWriteInfo.cs" />
-    <Compile Include="EUpdateType.cs" />
-    <Compile Include="IClientFrameManager.cs" />
+    <Compile Include="Enums\EUpdateType.cs" />
+    <Compile Include="Frames\IClientFrameManager.cs" />
     <Compile Include="Clients\BaseClient.cs" />
     <Compile Include="BaseServer.cs" />
-    <Compile Include="ClientFrame.cs" />
+    <Compile Include="Frames\ClientFrame.cs" />
     <Compile Include="Clients\GameClient.cs" />
-    <Compile Include="FrameSnapshot.cs" />
-    <Compile Include="FrameSnapshotEntry.cs" />
-    <Compile Include="FrameSnapshotManager.cs" />
+    <Compile Include="Frames\FrameSnapshot.cs" />
+    <Compile Include="Frames\FrameSnapshotEntry.cs" />
+    <Compile Include="Frames\FrameSnapshotManager.cs" />
     <Compile Include="GameServer.cs" />
     <Compile Include="Clients\IClient.cs" />
     <Compile Include="Clients\IClientMessageHandler.cs" />
@@ -63,12 +67,16 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Plugins\ServerPlugin.cs" />
+    <Compile Include="Util\LoggingExtension.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj">
       <Project>{d0db3720-d270-4db0-90f8-1138e2242852}</Project>
       <Name>Shared</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

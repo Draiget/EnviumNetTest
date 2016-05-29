@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -7,6 +8,8 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using Server.Clients;
+using Server.Frames;
+using Server.Util;
 using Shared;
 using Shared.Buffers;
 using Shared.Enums;
@@ -66,7 +69,7 @@ namespace Server
                     ConnectClient(packet.From, protocol, authProtocol, challengeNr, playerName, serverPassword);
                     break;
                 default:
-                    Console.WriteLine("Unknown connectionless type '{0}'!", type);
+                    Out.Debug("Unknown connectionless type '{0}'!", type);
                     return;
             }
         }
@@ -124,8 +127,7 @@ namespace Server
             // tell client connection worked, now use netchannels
             Networking.OutOfBandPrintf(Socket, addr, "{0}00000000000000", (char)EConnectionType.ConnectionAccept);
 
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("Client \"{0}\" has connected from [{1}]", client.GetClientName(), channel.GetRemoteAddress());
+            Out.MsgC( ConsoleColor.Yellow, "Client \"{0}\" has connected from [{1}]", client.GetClientName(), channel.GetRemoteAddress());
         }
 
         private int GetFreeSlot() {
@@ -168,7 +170,7 @@ namespace Server
                     // allow challenge values to last for 1 hour
                     if( Networking.NetTime > _serverQueryChallenges[ i ].Time + ChallengeLifetime ) {
                         _serverQueryChallenges.RemoveAt(i);
-                        Console.WriteLine("Old challenge from {0}", addr);
+                        Out.Warning("Old challenge from {0}", addr);
                         return false;
                     }
 
@@ -182,7 +184,7 @@ namespace Server
             }
 
             if( challenge != -1) {
-                Console.WriteLine("No challenge from {0}", addr);
+                Out.Debug("No challenge from {0}", addr);
             }
             return false;
         }
@@ -226,7 +228,7 @@ namespace Server
         private bool CheckIPConnectionReuse(EndPoint addr) {
             var sameConnections = Clients.Count(client => client.IsConnected() && !client.IsActive() && client.NetChannel.GetRemoteAddress().CompareAddr(addr, true));
             if( sameConnections > Networking.MaxReusePerIp ) {
-                Console.WriteLine("Too many connect packets from {0}!", addr.ToString(true));
+                Out.Warning("Too many connect packets from {0}!", addr.ToString(true));
                 return false;
             }
 
@@ -324,7 +326,7 @@ namespace Server
 
                 if ( !client.NetChannel.SendNetMsg( msg, reliable ) ) {
                     if ( msg.IsReliable() || reliable ) {
-                        Console.WriteLine("BaseServer.BroadcastMessage: Reliable broadcast message overflow for client {0}", client.GetClientName());
+                        Out.Warning("BaseServer.BroadcastMessage: Reliable broadcast message overflow for client {0}", client.GetClientName());
                     }
                 }
             }
@@ -333,7 +335,7 @@ namespace Server
         public void BroadcastMessage( INetMessage msg, IRecipientFilter filter ) {
             if( filter.IsInitMessage() ) {
                 if ( !msg.WriteToBuffer( Signon ) ) {
-                    Console.WriteLine("BaseServer.BroadcastMessage: Init message would overflow signon buffer!");
+                    Out.Warning("BaseServer.BroadcastMessage: Init message would overflow signon buffer!");
                 }
 
                 return;
@@ -348,7 +350,7 @@ namespace Server
 
                 if ( !client.NetChannel.SendNetMsg(msg) ) {
                     if ( msg.IsReliable() ) {
-                        Console.WriteLine("BaseServer.BroadcastMessage: Reliable filter message overflow for client {0}", client.GetClientName());
+                        Out.Warning("BaseServer.BroadcastMessage: Reliable filter message overflow for client {0}", client.GetClientName());
                     }
                 }
             }
@@ -372,7 +374,7 @@ namespace Server
                     client.NetChannel.Transmit();
                     client.UpdateSendState();
                 } else {
-                    Console.WriteLine("Client has no NetChannel!");
+                    Out.Debug("Client has no NetChannel!");
                 }
             }
         }

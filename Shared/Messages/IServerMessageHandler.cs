@@ -1,6 +1,4 @@
-using Shared.Messages;
-
-namespace Shared
+namespace Shared.Messages
 {
     public interface IServerMessageHandler : INetMessageHandler
     {

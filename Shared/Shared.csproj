@@ -45,13 +45,13 @@
     <Compile Include="Enums\ENetCommand.cs" />
     <Compile Include="Enums\EServerState.cs" />
     <Compile Include="Enums\ESignonState.cs" />
-    <Compile Include="IClientMessageHandler.cs" />
-    <Compile Include="IConnectionlessPacketHandler.cs" />
+    <Compile Include="Messages\IClientMessageHandler.cs" />
+    <Compile Include="Messages\IConnectionlessPacketHandler.cs" />
     <Compile Include="Channel\INetChannelHandler.cs" />
     <Compile Include="Messages\INetMessage.cs" />
     <Compile Include="Messages\INetMessageHandler.cs" />
     <Compile Include="IRecipientFilter.cs" />
-    <Compile Include="IServerMessageHandler.cs" />
+    <Compile Include="Messages\IServerMessageHandler.cs" />
     <Compile Include="Channel\NetChannel.cs" />
     <Compile Include="Messages\NetMessage.cs" />
     <Compile Include="NetMessages\NetMessageSignonState.cs" />
