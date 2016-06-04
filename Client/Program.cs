@@ -64,6 +64,11 @@ namespace Client
                     continue;
                 }
 
+                if( read != null && read.StartsWith("disconnect") ) {
+                    _clientState.Disconnect(true);
+                    continue;
+                }
+
                 Console.WriteLine("Unknown command \"{0}\".", read);
             }
         }

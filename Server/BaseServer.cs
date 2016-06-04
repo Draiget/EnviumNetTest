@@ -13,6 +13,7 @@ using Server.Util;
 using Shared;
 using Shared.Buffers;
 using Shared.Enums;
+using Shared.Filter;
 using Shared.Messages;
 
 namespace Server

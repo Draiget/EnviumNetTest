@@ -1,6 +1,6 @@
 namespace Shared.Messages
 {
-    public enum NetPacketHeader
+    public enum ENetPacketHeader
     {
         Choked = 1 << 0
     }

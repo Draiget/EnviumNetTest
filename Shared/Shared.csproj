@@ -50,14 +50,14 @@
     <Compile Include="Channel\INetChannelHandler.cs" />
     <Compile Include="Messages\INetMessage.cs" />
     <Compile Include="Messages\INetMessageHandler.cs" />
-    <Compile Include="IRecipientFilter.cs" />
+    <Compile Include="Filter\IRecipientFilter.cs" />
     <Compile Include="Messages\IServerMessageHandler.cs" />
     <Compile Include="Channel\NetChannel.cs" />
     <Compile Include="Messages\NetMessage.cs" />
     <Compile Include="NetMessages\NetMessageSignonState.cs" />
     <Compile Include="NetMessages\NetMessageTick.cs" />
     <Compile Include="Messages\NetPacket.cs" />
-    <Compile Include="Messages\NetPacketHeader.cs" />
+    <Compile Include="Messages\ENetPacketHeader.cs" />
     <Compile Include="NetProtocol.cs" />
     <Compile Include="Networking.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

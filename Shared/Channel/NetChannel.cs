@@ -69,7 +69,7 @@ namespace Shared.Channel
             _rate = Networking.DefaultRate;
 
             // Prevent the first message from getting dropped after connection is set up.
-            _outSequenceNrAck = 1;
+            _outSequenceNr = 1;
             _inSequenceNr = 0;
             _outSequenceNrAck = 0;
             _inReliableState = 0; // last remote reliable state
@@ -112,6 +112,9 @@ namespace Shared.Channel
             // TODO: Check choked packets
 
             var choked = 0;
+            if( (flags & (uint)ENetPacketHeader.Choked) == 0 ) {
+                choked = packet.Message.ReadByte();
+            }
 
             if( sequence <= _inSequenceNr ) {
                 return -1;
@@ -140,6 +143,7 @@ namespace Shared.Channel
 
             // check for invalid packet or header
             if( flags == -1 ) {
+                Console.WriteLine("Cannot process packet, invalid header flags!");
                 return;
             }
 
@@ -292,6 +296,16 @@ namespace Shared.Channel
 
             send.WriteByte(_inReliableState);
 
+            var flagsPos = send.Position;
+            // write correct flags value later
+            send.WriteByte(0);
+
+            byte flags = 0;
+            if ( _chokedPackets > 0 ) {
+                flags |= (byte)ENetPacketHeader.Choked;
+                send.WriteByte((byte)( _chokedPackets & 0xFF ));
+            }
+
             if( datagram != null ) {
                 if( datagram.GetNumBitsWritten() > 0 ) {
                     send.WriteBytes(datagram.GetData());
@@ -304,6 +318,8 @@ namespace Shared.Channel
 
             // clear unreliable data buffer
             StreamUnreliable.Reset();
+
+            send.WriteByteAt((int)flagsPos, flags);
 
             var bytesSend = Networking.SendPacket(this, _socket, _remoteAddress, send.GetData());
             // TODO: Calc sended size with udp header, and retreive stats

@@ -72,6 +72,11 @@ namespace Shared.Buffers
             _writer.Write(value);
         }
 
+        public void WriteByteAt(int pos, byte value) {
+            _writer.Seek(pos, SeekOrigin.Begin);
+            _writer.Write(value);
+        }
+
         public bool WriteBytes(byte[] value) {
             _writer.Write(value);
             return true;
